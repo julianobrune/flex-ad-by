@@ -15,7 +15,7 @@ package by.ad
     {
       const id1: Number = new Date().getTime();
       const id2: Number = Math.random();
-      const sha1str: String = SHA1.hex_sha1(id1 + id2 + salt + counter++);
+      const sha1str: String = SHA1.hex_sha1(id1 + id2 + salt);
 
       return sha1ToGUID(sha1str).toUpperCase();
     }
@@ -27,7 +27,5 @@ package by.ad
     {
       return [s.substr(0, 8), s.substr(8, 4), s.substr(12, 4), s.substr(16, 4), s.substr(20, 12)].join("-");
     }
-
-    private static var counter: uint = 0;
   }
 }

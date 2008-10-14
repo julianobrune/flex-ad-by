@@ -19,6 +19,21 @@
       const DATETIME_OFFSET: uint = 18;
       const src: ByteArray = readSerialNumber();
 
+      /*
+      struct SWF_SERIALNUMBER
+      { 
+        UI32 Id;         // "3"
+        UI32 Edition;    // "6"
+                         // "flex_sdk_4.0.0.3342"
+        UI8 Major;       // "4."
+        UI8 Minor;       // "0."
+        UI32 BuildL;     // "0."
+        UI32 BuildH;     // "3342"
+        UI32 TimestampL;
+        UI32 TimestampH;
+      };
+      */
+
       // date stored as uint64
       src.position = DATETIME_OFFSET;
       src.endian = Endian.LITTLE_ENDIAN;

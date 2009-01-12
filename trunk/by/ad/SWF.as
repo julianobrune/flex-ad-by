@@ -13,15 +13,17 @@
 
     ///////////////////////////////////////////////////////////////////////////
     // Returns compilation date of current module
-    public static function readCompilationDate(): Date
+    public static function readCompilationDate(serialNumber: ByteArray = null): Date
     {
       const compilationDate: Date = new Date;
       const DATETIME_OFFSET: uint = 18;
-      const src: ByteArray = readSerialNumber();
 
-      /*
+      if (serialNumber == null)
+        serialNumber = readSerialNumber();
+
+      /* example of filled SWF_SERIALNUMBER structure
       struct SWF_SERIALNUMBER
-      { 
+      {
         UI32 Id;         // "3"
         UI32 Edition;    // "6"
                          // "flex_sdk_4.0.0.3342"
@@ -34,10 +36,14 @@
       };
       */
 
+      // the SWF_SERIALNUMBER structure exists in FLEX swfs only, not FLASH
+      if (serialNumber == null)
+        return null;
+
       // date stored as uint64
-      src.position = DATETIME_OFFSET;
-      src.endian = Endian.LITTLE_ENDIAN;
-      compilationDate.time = src.readUnsignedInt() + src.readUnsignedInt() * (uint.MAX_VALUE + 1);
+      serialNumber.position = DATETIME_OFFSET;
+      serialNumber.endian = Endian.LITTLE_ENDIAN;
+      compilationDate.time = serialNumber.readUnsignedInt() + serialNumber.readUnsignedInt() * (uint.MAX_VALUE + 1);
 
       return compilationDate;
     }
@@ -52,16 +58,37 @@
 
     ///////////////////////////////////////////////////////////////////////////
     // Returns the tag body if it is possible
-    private static function findAndReadTagBody(theTagCode: uint): ByteArray
+    public static function findAndReadTagBody(theTagCode: uint): ByteArray
     {
-      const SWF_AVM2_HEADER_LENGTH: uint = 16;
-
       // getting direst access to unpacked SWF file
       const src: ByteArray = LoaderInfo.getLoaderInfoByDefinition(SWF).bytes;
-      // skip AVM2 SWF header
-      src.position = SWF_AVM2_HEADER_LENGTH;
 
-      while (src.position < src.length)
+      /*
+      SWF File Header
+      Field      Type  Offset   Comment
+      -----      ----  ------   -------
+      Signature  UI8   0        Signature byte: “F” indicates uncompressed, “C” indicates compressed (SWF 6 and later only)
+      Signature  UI8   1        Signature byte always “W”
+      Signature  UI8   2        Signature byte always “S”
+      Version    UI8   3        Single byte file version (for example, 0x06 for SWF 6)
+      FileLength UI32  4        Length of entire file in bytes
+      FrameSize  RECT  8        Frame size in twips
+      FrameRate  UI16  8+RECT   Frame delay in 8.8 fixed number of frames per second
+      FrameCount UI16  10+RECT  Total number of frames in file
+      */
+
+      // skip AVM2 SWF header
+      // skip Signature, Version & FileLength
+      src.position = 8;
+      // skip FrameSize
+      const RECT_UB_LENGTH: uint = 5;
+      const RECT_SB_LENGTH: uint = src.readUnsignedByte() >> (8 - RECT_UB_LENGTH);
+      const RECT_LENGTH: uint = Math.ceil((RECT_UB_LENGTH + RECT_SB_LENGTH * 4) / 8);
+      src.position += (RECT_LENGTH - 1);
+      // skip FrameRate & FrameCount
+      src.position += 4;
+
+      while (src.bytesAvailable > 0)
         with (readTag(src, theTagCode))
       {
         if (tagCode == theTagCode)
@@ -86,7 +113,8 @@
       }();
 
       const tagBody: ByteArray = new ByteArray;
-      src.readBytes(tagBody, 0, tagLength);
+      if (tagLength > 0)
+        src.readBytes(tagBody, 0, tagLength);
 
       return {
         tagCode: tagCode,

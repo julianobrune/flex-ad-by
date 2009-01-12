@@ -32,16 +32,17 @@
 
       sn.endian = Endian.LITTLE_ENDIAN;
 
-      /* example of filled SWF_SERIALNUMBER structure
+      /* example of filled SWF_SERIALNUMBER structure for flex_sdk_4.0.0.3342
+       * http://www.mirrors.docunext.com/cgi-bin/ming/checkout/trunk/ming/util/swftypes.h?rev=2405
       struct SWF_SERIALNUMBER
       {
         UI32 Id;         // "3"
         UI32 Edition;    // "6"
-                         // "flex_sdk_4.0.0.3342"
-        UI8 Major;       // "4."
-        UI8 Minor;       // "0."
-        UI32 BuildL;     // "0."
-        UI32 BuildH;     // "3342"
+
+        UI8 Major;       // "4"
+        UI8 Minor;       // "0"
+        UI32 BuildL;     // "3342"
+        UI32 BuildH;     // "0"
         UI32 TimestampL;
         UI32 TimestampH;
       };
@@ -62,6 +63,10 @@
           // date stored as uint64
           date.time = this.TimestampL + this.TimestampH * (uint.MAX_VALUE + 1);
           return date;
+        },
+
+        sdkVersion: function(): String {
+          return [this.Major, this.Minor, this.BuildH, this.BuildL].join('.');
         }
       };
     }
@@ -74,6 +79,7 @@
       const src: ByteArray = LoaderInfo.getLoaderInfoByDefinition(SWF).bytes;
 
       /*
+       * http://www.adobe.com/devnet/swf/pdf/swf_file_format_spec_v10.pdf
       SWF File Header
       Field      Type  Offset   Comment
       -----      ----  ------   -------

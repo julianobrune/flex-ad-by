@@ -11,15 +11,26 @@
     import flash.utils.ByteArray;
     import flash.utils.Endian;
 
-    ///////////////////////////////////////////////////////////////////////////
-    // Returns compilation date of current module
-    public static function readCompilationDate(serialNumber: ByteArray = null): Date
-    {
-      const compilationDate: Date = new Date;
-      const DATETIME_OFFSET: uint = 18;
+    // the SWF_SERIALNUMBER structure exists in FLEX swfs only, not FLASH
+    public static const TAG_SERIAL_NUMBER: uint = 0x29;
 
-      if (serialNumber == null)
-        serialNumber = readSerialNumber();
+    ///////////////////////////////////////////////////////////////////////////
+    // Returns compilation date of current SWF module
+    public static function readCompilationDate(): Date
+    {
+      const sn: Object = readSerialNumber();
+      return sn ? sn.compilationDate() : null;
+    }
+
+    ///////////////////////////////////////////////////////////////////////////
+    // Returns contents of Adobe SerialNumber SWF tag
+    public static function readSerialNumber(): Object
+    {
+      const sn: ByteArray = findAndReadTagBody(TAG_SERIAL_NUMBER);
+      if (sn == null)
+        return null;
+
+      sn.endian = Endian.LITTLE_ENDIAN;
 
       /* example of filled SWF_SERIALNUMBER structure
       struct SWF_SERIALNUMBER
@@ -36,24 +47,23 @@
       };
       */
 
-      // the SWF_SERIALNUMBER structure exists in FLEX swfs only, not FLASH
-      if (serialNumber == null)
-        return null;
+      return {
+        Id:         sn.readUnsignedInt(),
+        Edition:    sn.readUnsignedInt(),
+        Major:      sn.readUnsignedByte(),
+        Minor:      sn.readUnsignedByte(),
+        BuildL:     sn.readUnsignedInt(),
+        BuildH:     sn.readUnsignedInt(),
+        TimestampL: sn.readUnsignedInt(),
+        TimestampH: sn.readUnsignedInt(),
 
-      // date stored as uint64
-      serialNumber.position = DATETIME_OFFSET;
-      serialNumber.endian = Endian.LITTLE_ENDIAN;
-      compilationDate.time = serialNumber.readUnsignedInt() + serialNumber.readUnsignedInt() * (uint.MAX_VALUE + 1);
-
-      return compilationDate;
-    }
-
-    ///////////////////////////////////////////////////////////////////////////
-    // Returns contents of Adobe SerialNumber SWF tag
-    public static function readSerialNumber(): ByteArray
-    {
-      const TAG_SERIAL_NUMBER: uint = 0x29;
-      return findAndReadTagBody(TAG_SERIAL_NUMBER);
+        compilationDate: function(): Date {
+          const date: Date = new Date;
+          // date stored as uint64
+          date.time = this.TimestampL + this.TimestampH * (uint.MAX_VALUE + 1);
+          return date;
+        }
+      };
     }
 
     ///////////////////////////////////////////////////////////////////////////
@@ -88,6 +98,7 @@
       // skip FrameRate & FrameCount
       src.position += 4;
 
+      // looking for tag with code = theTagCode
       while (src.bytesAvailable > 0)
         with (readTag(src, theTagCode))
       {

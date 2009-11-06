@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:Application xmlns:mx="http://www.adobe.com/2006/mxml" layout="absolute">
+  <mx:Script>
+    <![CDATA[
+      import by.ad.SWF;
+
+      public function init(): void {
+        const d: Date = SWF.readCompilationDate();
+        b.text = d.toString();
+      }
+    ]]>
+  </mx:Script>
+
+  <mx:Label id="b"/>
+  <mx:Button x="100" click="init()"/>
+</mx:Application>
